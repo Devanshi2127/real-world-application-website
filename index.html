@@ -4,8 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lost & Found Portal</title>
+
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
   <style>
     body {
       background: linear-gradient(to right, #e0eafc, #cfdef3);
@@ -35,8 +37,10 @@
     }
   </style>
 </head>
+
 <body>
   <div class="container">
+
     <!-- Header -->
     <div class="header-box">
       <h1 class="fw-bold">Lost & Found Portal</h1>
@@ -47,12 +51,15 @@
     <!-- Report Form -->
     <div class="card p-4 mb-4">
       <h4>Report Lost or Found Item</h4>
+
       <form id="itemForm">
         <div class="row g-3">
+
           <div class="col-md-6">
             <label class="form-label">Item Name</label>
-            <input type="text" id="itemName" class="form-control" placeholder="e.g., Wallet, ID Card" required>
+            <input type="text" id="itemName" class="form-control" required>
           </div>
+
           <div class="col-md-6">
             <label class="form-label">Category</label>
             <select id="itemType" class="form-select" required>
@@ -61,21 +68,26 @@
               <option value="Found">Found</option>
             </select>
           </div>
+
           <div class="col-md-12">
             <label class="form-label">Description</label>
-            <textarea id="itemDesc" class="form-control" placeholder="Brief description" required></textarea>
+            <textarea id="itemDesc" class="form-control" required></textarea>
           </div>
+
           <div class="col-md-6">
             <label class="form-label">Location</label>
-            <input type="text" id="itemLocation" class="form-control" placeholder="Where was it lost/found?" required>
+            <input type="text" id="itemLocation" class="form-control" required>
           </div>
+
           <div class="col-md-6">
             <label class="form-label">Contact Info</label>
-            <input type="text" id="itemContact" class="form-control" placeholder="Phone or Email" required>
+            <input type="text" id="itemContact" class="form-control" required>
           </div>
+
         </div>
+
         <div class="mt-3 text-end">
-          <button class="btn btn-primary" type="submit">➕ Submit</button>
+          <button class="btn btn-primary" type="submit">Submit</button>
         </div>
       </form>
     </div>
@@ -84,73 +96,91 @@
     <div class="card p-4">
       <h4>Reported Items</h4>
       <div class="row mt-3" id="itemsList">
-        <p class="text-muted">No items reported yet.</p>
+        <p class="text-muted">Loading items...</p>
       </div>
     </div>
+
   </div>
 
-  <!-- Bootstrap & JS -->
+  <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    <script>
-  const itemForm = document.getElementById("itemForm");
-  const itemsList = document.getElementById("itemsList");
 
-  // Fetch and display items from backend
-  function loadItems() {
-    fetch("http://127.0.0.1:5000/get_items")
-      .then(response => response.json())
-      .then(data => {
-        itemsList.innerHTML = "";
-        if (data.length === 0) {
-          itemsList.innerHTML = "<p class='text-muted'>No items reported yet.</p>";
-        } else {
+  <!-- BACKEND CONNECTION SCRIPT -->
+  <script>
+
+    const itemForm = document.getElementById("itemForm");
+    const itemsList = document.getElementById("itemsList");
+
+    const BASE_URL = "http://127.0.0.1:5000";
+
+    // Load items from backend
+    function loadItems() {
+      fetch(`${BASE_URL}/get_items`)
+        .then(response => response.json())
+        .then(data => {
+
+          itemsList.innerHTML = "";
+
+          if (data.length === 0) {
+            itemsList.innerHTML = "<p class='text-muted'>No items reported yet.</p>";
+            return;
+          }
+
           data.forEach(item => {
             let card = document.createElement("div");
             card.className = "col-md-6 mb-3";
+
             card.innerHTML = `
               <div class="card item-card p-3 border-${item.type === "Lost" ? "danger" : "success"}">
-                <h5>${item.type}: ${item.name}</h5>
+                <h5 class="card-title">${item.type}: ${item.name}</h5>
                 <p><b>Description:</b> ${item.description}</p>
                 <p><b>Location:</b> ${item.location}</p>
                 <p><b>Contact:</b> ${item.contact}</p>
               </div>
             `;
+
             itemsList.appendChild(card);
           });
-        }
+        })
+        .catch(error => {
+          itemsList.innerHTML = "<p class='text-danger'>Backend not connected.</p>";
+        });
+    }
+
+    // Submit form data to backend
+    itemForm.addEventListener("submit", function(e) {
+      e.preventDefault();
+
+      const data = {
+        name: document.getElementById("itemName").value,
+        type: document.getElementById("itemType").value,
+        description: document.getElementById("itemDesc").value,
+        location: document.getElementById("itemLocation").value,
+        contact: document.getElementById("itemContact").value
+      };
+
+      fetch(`${BASE_URL}/add_item`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      })
+      .then(response => response.json())
+      .then(result => {
+        alert(result.message);
+        itemForm.reset();
+        loadItems();
+      })
+      .catch(error => {
+        alert("Error connecting to backend.");
       });
-  }
-
-  // Submit form
-  itemForm.addEventListener("submit", function(e) {
-    e.preventDefault();
-
-    const data = {
-      name: document.getElementById("itemName").value,
-      type: document.getElementById("itemType").value,
-      description: document.getElementById("itemDesc").value,
-      location: document.getElementById("itemLocation").value,
-      contact: document.getElementById("itemContact").value
-    };
-
-    fetch("http://127.0.0.1:5000/add_item", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(result => {
-      alert(result.message);
-      itemForm.reset();
-      loadItems();
     });
-  });
 
-  // Load items when page opens
-  loadItems();
-</script>
+    // Load items when page loads
+    window.onload = loadItems;
 
   </script>
+
 </body>
 </html>
