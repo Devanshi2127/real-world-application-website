@@ -18,13 +18,13 @@ def get_db():
 
 
 # -------------------------
-# Initialize Database
+# Initialize/Upgrade Database
 # -------------------------
 def init_db():
     conn = get_db()
     cursor = conn.cursor()
 
-    # Users table
+    # Create users table if not exists
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,17 +34,27 @@ def init_db():
         )
     ''')
 
-    # Items table (Lost + Found)
+    # Create lost_items table if not exists
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS items (
+        CREATE TABLE IF NOT EXISTS lost_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT,
             description TEXT,
             location TEXT,
-            contact TEXT,
-            type TEXT
+            image TEXT
         )
     ''')
+
+    # Upgrade lost_items table to include contact and type
+    try:
+        cursor.execute("ALTER TABLE lost_items ADD COLUMN contact TEXT")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    try:
+        cursor.execute("ALTER TABLE lost_items ADD COLUMN type TEXT")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
 
     conn.commit()
     conn.close()
@@ -114,18 +124,19 @@ def login():
 @app.route('/items', methods=['POST'])
 def add_item():
     data = request.json
-
     conn = get_db()
     cursor = conn.cursor()
 
     cursor.execute(
-        "INSERT INTO items (title, description, location, contact, type) VALUES (?, ?, ?, ?, ?)",
-        (data['title'], data['description'], data['location'], data['contact'], data['type'])
+        "INSERT INTO lost_items (title, description, location, image, contact, type) VALUES (?, ?, ?, ?, ?, ?)",
+        (
+            data['title'], data['description'], data['location'],
+            data.get('image', ''), data['contact'], data['type']
+        )
     )
 
     conn.commit()
     conn.close()
-
     return jsonify({"message": "Item added successfully!"}), 201
 
 
@@ -137,7 +148,7 @@ def get_items():
     conn = get_db()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM items")
+    cursor.execute("SELECT * FROM lost_items")
     items = cursor.fetchall()
     conn.close()
 
@@ -148,5 +159,5 @@ def get_items():
 # Run App
 # -------------------------
 if __name__ == "__main__":
-    init_db()  # Initialize DB
+    init_db()  # Initialize or upgrade DB
     app.run(host="0.0.0.0", port=5001, debug=True)
