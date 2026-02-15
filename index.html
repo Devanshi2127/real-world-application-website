@@ -92,38 +92,65 @@
   <!-- Bootstrap & JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    const itemForm = document.getElementById("itemForm");
-    const itemsList = document.getElementById("itemsList");
+    <script>
+  const itemForm = document.getElementById("itemForm");
+  const itemsList = document.getElementById("itemsList");
 
-    itemForm.addEventListener("submit", function(e) {
-      e.preventDefault();
-
-      let name = document.getElementById("itemName").value;
-      let type = document.getElementById("itemType").value;
-      let desc = document.getElementById("itemDesc").value;
-      let location = document.getElementById("itemLocation").value;
-      let contact = document.getElementById("itemContact").value;
-
-      // Create card
-      let card = document.createElement("div");
-      card.className = "col-md-6 mb-3";
-      card.innerHTML = `
-        <div class="card item-card p-3 border-${type === "Lost" ? "danger" : "success"}">
-          <h5 class="card-title">${type}: ${name}</h5>
-          <p class="card-text"><b>Description:</b> ${desc}</p>
-          <p class="card-text"><b>Location:</b> ${location}</p>
-          <p class="card-text"><b>Contact:</b> ${contact}</p>
-        </div>
-      `;
-
-      // Remove placeholder text if first entry
-      if (itemsList.querySelector("p")) {
+  // Fetch and display items from backend
+  function loadItems() {
+    fetch("http://127.0.0.1:5000/get_items")
+      .then(response => response.json())
+      .then(data => {
         itemsList.innerHTML = "";
-      }
+        if (data.length === 0) {
+          itemsList.innerHTML = "<p class='text-muted'>No items reported yet.</p>";
+        } else {
+          data.forEach(item => {
+            let card = document.createElement("div");
+            card.className = "col-md-6 mb-3";
+            card.innerHTML = `
+              <div class="card item-card p-3 border-${item.type === "Lost" ? "danger" : "success"}">
+                <h5>${item.type}: ${item.name}</h5>
+                <p><b>Description:</b> ${item.description}</p>
+                <p><b>Location:</b> ${item.location}</p>
+                <p><b>Contact:</b> ${item.contact}</p>
+              </div>
+            `;
+            itemsList.appendChild(card);
+          });
+        }
+      });
+  }
 
-      itemsList.appendChild(card);
+  // Submit form
+  itemForm.addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    const data = {
+      name: document.getElementById("itemName").value,
+      type: document.getElementById("itemType").value,
+      description: document.getElementById("itemDesc").value,
+      location: document.getElementById("itemLocation").value,
+      contact: document.getElementById("itemContact").value
+    };
+
+    fetch("http://127.0.0.1:5000/add_item", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+      alert(result.message);
       itemForm.reset();
+      loadItems();
     });
+  });
+
+  // Load items when page opens
+  loadItems();
+</script>
+
   </script>
 </body>
 </html>
