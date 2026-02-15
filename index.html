@@ -1,186 +1,127 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lost & Found Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
   <style>
     body {
       background: linear-gradient(to right, #e0eafc, #cfdef3);
-      font-family: Arial, sans-serif;
-    }
-    .container {
-      margin-top: 30px;
-      max-width: 950px;
+      padding: 30px;
     }
     .card {
-      border-radius: 15px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    }
-    .header-box {
-      background: #007bff;
-      color: white;
-      padding: 20px;
-      border-radius: 15px;
-      text-align: center;
-      margin-bottom: 30px;
-    }
-    .item-card {
-      transition: transform 0.3s;
-    }
-    .item-card:hover {
-      transform: scale(1.05);
+      margin-bottom: 15px;
     }
   </style>
 </head>
 
 <body>
-  <div class="container">
 
-    <!-- Header -->
-    <div class="header-box">
-      <h1 class="fw-bold">Lost & Found Portal</h1>
-      <p class="lead">A solution to help students find their lost belongings.</p>
-      <p><b>Name:</b> Devanshi Trivedi | <b>Enrollment No:</b> 240905040067</p>
-    </div>
+<div class="container">
 
-    <!-- Report Form -->
-    <div class="card p-4 mb-4">
-      <h4>Report Lost or Found Item</h4>
+  <h2 class="text-center mb-4">Lost & Found Portal</h2>
 
-      <form id="itemForm">
-        <div class="row g-3">
+  <!-- Form -->
+  <div class="card p-4 mb-4">
+    <h4>Add Lost Item</h4>
+    <form id="itemForm">
 
-          <div class="col-md-6">
-            <label class="form-label">Item Name</label>
-            <input type="text" id="itemName" class="form-control" required>
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">Category</label>
-            <select id="itemType" class="form-select" required>
-              <option value="">Choose...</option>
-              <option value="Lost">Lost</option>
-              <option value="Found">Found</option>
-            </select>
-          </div>
-
-          <div class="col-md-12">
-            <label class="form-label">Description</label>
-            <textarea id="itemDesc" class="form-control" required></textarea>
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">Location</label>
-            <input type="text" id="itemLocation" class="form-control" required>
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">Contact Info</label>
-            <input type="text" id="itemContact" class="form-control" required>
-          </div>
-
-        </div>
-
-        <div class="mt-3 text-end">
-          <button class="btn btn-primary" type="submit">Submit</button>
-        </div>
-      </form>
-    </div>
-
-    <!-- Items List -->
-    <div class="card p-4">
-      <h4>Reported Items</h4>
-      <div class="row mt-3" id="itemsList">
-        <p class="text-muted">Loading items...</p>
+      <div class="mb-3">
+        <label>Item Title</label>
+        <input type="text" id="itemName" class="form-control" required>
       </div>
-    </div>
 
+      <div class="mb-3">
+        <label>Description</label>
+        <textarea id="itemDesc" class="form-control" required></textarea>
+      </div>
+
+      <div class="mb-3">
+        <label>Location</label>
+        <input type="text" id="itemLocation" class="form-control" required>
+      </div>
+
+      <button class="btn btn-primary" type="submit">Submit</button>
+    </form>
   </div>
 
-  <!-- Bootstrap JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Items List -->
+  <div class="card p-4">
+    <h4>Lost Items</h4>
+    <div id="itemsList"></div>
+  </div>
 
-  <!-- BACKEND CONNECTION SCRIPT -->
-  <script>
+</div>
 
-    const itemForm = document.getElementById("itemForm");
-    const itemsList = document.getElementById("itemsList");
+<script>
+const BASE_URL = "http://127.0.0.1:5001";
+const itemForm = document.getElementById("itemForm");
+const itemsList = document.getElementById("itemsList");
 
-    const BASE_URL = "http://127.0.0.1:5001";
+// Load Items
+function loadItems() {
+  fetch(`${BASE_URL}/lost`)
+    .then(response => response.json())
+    .then(data => {
 
-    // Load items from backend
-    function loadItems() {
-      fetch(`${BASE_URL}/get_items`)
-        .then(response => response.json())
-        .then(data => {
+      itemsList.innerHTML = "";
 
-          itemsList.innerHTML = "";
+      if (data.length === 0) {
+        itemsList.innerHTML = "<p>No items reported yet.</p>";
+        return;
+      }
 
-          if (data.length === 0) {
-            itemsList.innerHTML = "<p class='text-muted'>No items reported yet.</p>";
-            return;
-          }
+      data.forEach(item => {
+        let card = document.createElement("div");
+        card.className = "card p-3";
 
-          data.forEach(item => {
-            let card = document.createElement("div");
-            card.className = "col-md-6 mb-3";
+        card.innerHTML = `
+          <h5>${item.title}</h5>
+          <p><b>Description:</b> ${item.description}</p>
+          <p><b>Location:</b> ${item.location}</p>
+        `;
 
-            card.innerHTML = `
-              <div class="card item-card p-3 border-${item.type === "Lost" ? "danger" : "success"}">
-                <h5 class="card-title">${item.type}: ${item.name}</h5>
-                <p><b>Description:</b> ${item.description}</p>
-                <p><b>Location:</b> ${item.location}</p>
-                <p><b>Contact:</b> ${item.contact}</p>
-              </div>
-            `;
-
-            itemsList.appendChild(card);
-          });
-        })
-        .catch(error => {
-          itemsList.innerHTML = "<p class='text-danger'>Backend not connected.</p>";
-        });
-    }
-
-    // Submit form data to backend
-    itemForm.addEventListener("submit", function(e) {
-      e.preventDefault();
-
-      const data = {
-        name: document.getElementById("itemName").value,
-        type: document.getElementById("itemType").value,
-        description: document.getElementById("itemDesc").value,
-        location: document.getElementById("itemLocation").value,
-        contact: document.getElementById("itemContact").value
-      };
-
-      fetch(`${BASE_URL}/add_item`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(data)
-      })
-      .then(response => response.json())
-      .then(result => {
-        alert(result.message);
-        itemForm.reset();
-        loadItems();
-      })
-      .catch(error => {
-        alert("Error connecting to backend.");
+        itemsList.appendChild(card);
       });
+    })
+    .catch(error => {
+      itemsList.innerHTML = "<p style='color:red;'>Backend not connected</p>";
     });
+}
 
-    // Load items when page loads
-    window.onload = loadItems;
+// Submit Form
+itemForm.addEventListener("submit", function(e) {
+  e.preventDefault();
 
-  </script>
+  const data = {
+    title: document.getElementById("itemName").value,
+    description: document.getElementById("itemDesc").value,
+    location: document.getElementById("itemLocation").value,
+    image: ""
+  };
+
+  fetch(`${BASE_URL}/lost`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(data)
+  })
+  .then(response => response.json())
+  .then(result => {
+    alert(result.message);
+    itemForm.reset();
+    loadItems();
+  })
+  .catch(error => {
+    alert("Error connecting to backend");
+  });
+});
+
+window.onload = loadItems;
+</script>
 
 </body>
 </html>
