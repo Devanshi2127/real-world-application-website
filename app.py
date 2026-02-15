@@ -1,83 +1,152 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import sqlite3
+import os
 
 app = Flask(__name__)
-CORS(app)  # helps frontend talk to backend
+CORS(app)
 
+DATABASE = "database.db"
+
+# -------------------------
+# Database Connection
+# -------------------------
 def get_db():
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     return conn
 
-@app.before_first_request
+
+# -------------------------
+# Initialize Database
+# -------------------------
 def init_db():
     conn = get_db()
     cursor = conn.cursor()
+
+    # Users table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT,
             email TEXT UNIQUE,
             password TEXT
         )
     ''')
+
+    # Items table (Lost + Found)
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS lost_items (
-            id INTEGER PRIMARY KEY,
+        CREATE TABLE IF NOT EXISTS items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT,
             description TEXT,
             location TEXT,
-            image TEXT
+            contact TEXT,
+            type TEXT
         )
     ''')
+
     conn.commit()
     conn.close()
 
+
+# -------------------------
+# Home Route
+# -------------------------
 @app.route('/')
 def home():
-    return "API Running"
+    return "Lost & Found Backend Running 🚀"
 
+
+# -------------------------
+# Register Route
+# -------------------------
 @app.route('/register', methods=['POST'])
 def register():
     data = request.json
+
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
-                   (data['name'], data['email'], data['password']))
-    conn.commit()
-    return jsonify({"msg":"Registered"}), 201
 
+    try:
+        cursor.execute(
+            "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
+            (data['name'], data['email'], data['password'])
+        )
+        conn.commit()
+        return jsonify({"message": "User registered successfully!"}), 201
+    except sqlite3.IntegrityError:
+        return jsonify({"message": "Email already exists!"}), 400
+    finally:
+        conn.close()
+
+
+# -------------------------
+# Login Route
+# -------------------------
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
+
     conn = get_db()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM users WHERE email=? AND password=?",
-                   (data['email'], data['password']))
+    cursor.execute(
+        "SELECT * FROM users WHERE email=? AND password=?",
+        (data['email'], data['password'])
+    )
+
     user = cursor.fetchone()
+    conn.close()
 
     if user:
-        return jsonify({"msg":"Login Success", "user": dict(user)})
+        return jsonify({
+            "message": "Login successful!",
+            "user": dict(user)
+        })
     else:
-        return jsonify({"msg":"Invalid Details"}), 401
+        return jsonify({"message": "Invalid email or password"}), 401
 
-@app.route('/lost', methods=['GET','POST'])
-def lost_items():
+
+# -------------------------
+# Add Item (Lost or Found)
+# -------------------------
+@app.route('/items', methods=['POST'])
+def add_item():
+    data = request.json
+
     conn = get_db()
     cursor = conn.cursor()
 
-    if request.method == 'POST':
-        d = request.json
-        cursor.execute("INSERT INTO lost_items (title,description,location,image) VALUES (?,?,?,?)",
-                       (d['title'],d['description'],d['location'], d.get('image','')))
-        conn.commit()
-        return jsonify({"msg":"Lost item added"}), 201
+    cursor.execute(
+        "INSERT INTO items (title, description, location, contact, type) VALUES (?, ?, ?, ?, ?)",
+        (data['title'], data['description'], data['location'], data['contact'], data['type'])
+    )
 
-    cursor.execute("SELECT * FROM lost_items")
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "Item added successfully!"}), 201
+
+
+# -------------------------
+# Get All Items
+# -------------------------
+@app.route('/items', methods=['GET'])
+def get_items():
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM items")
     items = cursor.fetchall()
-    return jsonify([dict(i) for i in items])
+    conn.close()
 
+    return jsonify([dict(item) for item in items])
+
+
+# -------------------------
+# Run App
+# -------------------------
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    init_db()  # Initialize DB
+    app.run(host="0.0.0.0", port=5001, debug=True)
